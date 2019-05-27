@@ -13,7 +13,9 @@ from selenium import webdriver
 
 from bs4 import BeautifulSoup
 from songs_tool import codb
+from importlib import reload
 
+reload(codb)
 co = codb.conndb()
 
 host = "na.op.gg"
@@ -94,6 +96,7 @@ for i in range(grandmaster, diamond2):
                 output['CS'] += [cs]
 
 df = pd.DataFrame().from_dict(output)
+df['Champion'] = df['Champion'].apply(lambda x: ''.join([x for x in x if x.isalpha()]))
 codb.upload_table(table_name, df, co)
 
 print(pd.read_sql("SELECT * FROM {}".format(table_name), co))

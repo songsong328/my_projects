@@ -12,7 +12,6 @@ def conndb():
                               host = "localhost",
                               port = "5432",
                               database = "songdb")
-    print("Connected to Database.\n")
     return connection
 
 def create_tbl(tblname, columns, co):
@@ -33,40 +32,43 @@ def add_col(tblname, df, col_name, co):
         co.cursor().execute(qry)
         print("Successfully Added Column {} to {}".format(col_name, tblname))
     except:
-        print("Failed to Add Column {}".format(col_name))
-    
+        print("Failed to Add Column {}".format(col_name))   
+
+    # insert into database
     sql = """INSERT INTO {} ({}) VALUES """.format(tblname, col_name)
-    incremental = 0
     length = col.shape[0]
     data = sql
     
-    progress_count = 0
-    for row in range(col.shape[0]):
+    # track progress
+    upload_threshold = 10000
+    upload_threshold_ = [x for x in range(0, length, upload_threshold)]
+    for row in range(length):
         val = ["\'" + col.iloc[row] + "\'"]
-        incremental += 1
         header = "("
         footer = "),\n"
 
         if row+1 < length:
-            data += (header + 
-                     ', '.join(val) +
-                     footer)
+            if (row+1) in upload_threshold_:
+                data += (header + ', '.join(val) + ")")
+                try:
+                    co.cursor().execute(data)
+                    print("{:.0f}% done\n".format(((row+1)/length)*100))
+                except:
+                    print("Failed, Rolled Back.\n")
+                    rollback(conndb())
+                    rollback(conndb())
+                data = sql
+            else:
+                data += (header + ', '.join(val) + footer)
         else:
-            data += (header +
-                     ', '.join(val) +
-                     ")\n")
-        if (incremental > 999) or (length - (row+1) == 0):
+            data += (header + ', '.join(val) + ")")
             try:
-                progress_count += incremental
                 co.cursor().execute(data)
-                print("{:.0f}% done\n".format(progress_count*100/col.shape[0]))
+                print("{:.0f}% done\n".format(((row+1)/length)*100))
             except:
                 print("Failed, Rolled Back.\n")
-                rollback()
-                rollback()
-                
-            incremental = 0
-            data = sql    
+                rollback(conndb())
+                rollback(conndb())
 
 def drop_tbl(tblname, co):
     sql = """DROP TABLE {}""".format(tblname)
@@ -111,34 +113,37 @@ def upload_table(tblname, df, co):
     df.columns = df_cols
     todo = df.astype(str).copy()
     length = todo.shape[0]
-    incremental = 0
     data = sql
     
     # track progress
-    progress_count = 0
+    upload_threshold = 10000
+    upload_threshold_ = [x for x in range(0, length, upload_threshold)]
     for row in range(length):
         val = ["\'{}\'".format(x) for x in todo.iloc[row]]
-        incremental += 1
         header = "("
         footer = "),\n"
 
         if row+1 < length:
-            data += (header + 
-                     ', '.join(val) +
-                     footer)
+            if (row+1) in upload_threshold_:
+                data += (header + ', '.join(val) + ")")
+                try:
+                    co.cursor().execute(data)
+                    print("{:.0f}% done\n".format(((row+1)/length)*100))
+                except:
+                    print("Failed, Rolled Back.\n")
+                    rollback(conndb())
+                    rollback(conndb())
+                data = sql
+            else:
+                data += (header + ', '.join(val) + footer)
         else:
-            data += (header +
-                     ', '.join(val) +
-                     ")\n")
-        if (incremental > 999) or (length - (row+1) == 0):
+            data += (header + ', '.join(val) + ")")
             try:
                 co.cursor().execute(data)
-                progress_count += incremental
-                print("{:.0f}% done\n".format((progress_count/length)*100))
+                print("{:.0f}% done\n".format(((row+1)/length)*100))
             except:
                 print("Failed, Rolled Back.\n")
-                rollback()
-                rollback()
-            incremental = 0
-            data = sql
+                rollback(conndb())
+                rollback(conndb())
+
     co.commit()
