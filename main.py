@@ -9,6 +9,7 @@ import pandas as pd
 #import numpy as np
 import urllib
 import time
+import re
 from selenium import webdriver
 
 from bs4 import BeautifulSoup
@@ -21,7 +22,7 @@ co = codb.conndb()
 host = "na.op.gg"
 header_qry = "SELECT * FROM MYHEADERS"
 exe_path = r"C:\Users\swang\Downloads\webdrivers\chromedriver74.exe"
-grandmaster = 5
+grandmaster = 50
 diamond2 = 51
 headers = {'User-Agent': pd.read_sql(header_qry, co).iloc[0][0],
            'Host': host}
@@ -33,7 +34,8 @@ table_name = 'Gaming'
 browser = webdriver.Chrome(exe_path)
 
 output = {'Summoner': [], 'Ranking': [], 'Win_Ratio': [],
-          'Champion': [], 'Game_Type': [], 'Game_Length': [],
+          'Champion': [], 'SS_D': [], 'SS_F': [],
+          'Game_Type': [], 'Game_Length': [],
           'Kill': [], 'Death': [], 'Assist': [], 'KDA': [], 'CS': []
           }
 for i in range(grandmaster, diamond2):
@@ -77,6 +79,10 @@ for i in range(grandmaster, diamond2):
                 champ = game.find('div', {'class': 'ChampionName'}).a.text
                 game_type = game.find('div', {'class': 'GameType'}).text.strip()
                 game_len = game.find('div', {'class': 'GameLength'}).text
+                ss_d = game.find('div', {'class':'SummonerSpell'}).find_all('div', 'Spell')[0]
+                ss_f = game.find('div', {'class':'SummonerSpell'}).find_all('div', 'Spell')[1]
+                d = re.search('<img alt="(.*?)"', str(ss_d), re.S).group(1)
+                f = re.search('<img alt="(.*?)"', str(ss_f), re.S).group(1)
                 kill = game.find('div', {'class': 'KDA'}).find('span', {'class': 'Kill'}).text
                 death = game.find('div', {'class': 'KDA'}).find('span', {'class': 'Death'}).text
                 assist = game.find('div', {'class': 'KDA'}).find('span', {'class': 'Assist'}).text
@@ -87,6 +93,8 @@ for i in range(grandmaster, diamond2):
                 cs = game.find('span', {'class': 'CS'}).text
                 
                 output['Champion'] += [champ]
+                output['SS_D'] += [d]
+                output['SS_F'] += [f]
                 output['Game_Type'] += [game_type]
                 output['Game_Length'] += [game_len]
                 output['Kill'] += [kill]
@@ -97,6 +105,9 @@ for i in range(grandmaster, diamond2):
 
 df = pd.DataFrame().from_dict(output)
 df['Champion'] = df['Champion'].apply(lambda x: ''.join([x for x in x if x.isalpha()]))
+
+codb.insert_vals(table_name, df, df.columns.tolist(), co)
+
 codb.upload_table(table_name, df, co)
 
 print(pd.read_sql("SELECT * FROM {}".format(table_name), co))
