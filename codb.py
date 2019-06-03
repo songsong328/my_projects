@@ -69,48 +69,13 @@ def add_col(tblname, df, col_name, co):
                 print("Failed, Rolled Back.\n")
                 rollback(conndb())
                 rollback(conndb())
-
-def drop_tbl(tblname, co):
-    sql = """DROP TABLE {}""".format(tblname)
-    co.cursor().execute(sql)
-    print("Successfully Dropped Table {}".format(tblname))
-    co.commit()
-
-def drop_col(tblname, col_name, co):
-    sql = """ALTER TABLE {} DROP COLUMN {}""".format(tblname, col_name)
-    co.cursor().execute(sql)
-    print("Successfully Dropped Column {} from {}".format(col_name, tblname))
-    co.commit()
-
-def rollback(co):
-    c = conndb()
-    c.rollback()
-    c.commit()
-
-def upload_table(tblname, df, co):
-    # name correction
-    df_cols = []
-    for x in df.columns:
-        if x[0].isdigit():
-            newx = input("correction: {} starting with a number\n".format(x))
-            while newx[0].isdigit() or len(newx) > 30:
-                newx = input("correction: {} starting with a number".format(x))
-            df_cols += [newx]
-            continue
-        if len(x) > 30:
-            newx = input("correction: {} too long\n".format(x))
-            while len(newx) > 30:
-                newx = input("correction: {} too long".format(x))
-            df_cols += [newx]
-            continue
-        df_cols += [x]
     
-    # create table template
-    create_tbl(tblname, df_cols, co)
+
+def insert_vals(tblname, df, selected_cols, co):
     
     # insert into database
-    sql = """INSERT INTO {} VALUES """.format(tblname)
-    df.columns = df_cols
+    columns = ', '.join(selected_cols)
+    sql = """INSERT INTO {} ({}) VALUES """.format(tblname, columns)
     todo = df.astype(str).copy()
     length = todo.shape[0]
     data = sql
@@ -145,5 +110,44 @@ def upload_table(tblname, df, co):
                 print("Failed, Rolled Back.\n")
                 rollback(conndb())
                 rollback(conndb())
-
     co.commit()
+    
+def drop_tbl(tblname, co):
+    sql = """DROP TABLE {}""".format(tblname)
+    co.cursor().execute(sql)
+    print("Successfully Dropped Table {}".format(tblname))
+    co.commit()
+
+def drop_col(tblname, col_name, co):
+    sql = """ALTER TABLE {} DROP COLUMN {}""".format(tblname, col_name)
+    co.cursor().execute(sql)
+    print("Successfully Dropped Column {} from {}".format(col_name, tblname))
+    co.commit()
+
+def rollback(co):
+    c = conndb()
+    c.rollback()
+    c.commit()
+
+def upload_table(tblname, df, co):
+    # name correction
+    df_cols = []
+    for x in df.columns:
+        if x[0].isdigit():
+            newx = input("correction: {} starting with a number\n".format(x))
+            while newx[0].isdigit() or len(newx) > 30:
+                newx = input("correction: {} starting with a number".format(x))
+            df_cols += [newx]
+            continue
+        if len(x) > 30:
+            newx = input("correction: {} too long\n".format(x))
+            while len(newx) > 30:
+                newx = input("correction: {} too long".format(x))
+            df_cols += [newx]
+            continue
+        df_cols += [x]
+    df.columns = df_cols
+    # create table template
+    create_tbl(tblname, df_cols, co)
+    
+    insert_vals(tblname, df, df_cols, co)

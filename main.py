@@ -22,8 +22,8 @@ co = codb.conndb()
 host = "na.op.gg"
 header_qry = "SELECT * FROM MYHEADERS"
 exe_path = r"C:\Users\swang\Downloads\webdrivers\chromedriver74.exe"
-grandmaster = 50
-diamond2 = 51
+grandmaster = 52
+diamond2 = 60
 headers = {'User-Agent': pd.read_sql(header_qry, co).iloc[0][0],
            'Host': host}
 parser = {'name': 'English'}
